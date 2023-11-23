@@ -1,8 +1,7 @@
 package com.demo.sandbox.snippet;
 
 import java.sql.Timestamp;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -15,7 +14,6 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
 @RequestMapping(value = "/")
@@ -28,9 +26,8 @@ public class SnippetController {
 	}
 	
 	@GetMapping("th_snippets")
-	public String getAll(Model model, @RequestParam(name="keyword", required=false) String keyword){
+	public String getAll(Model model){
 		List<Snippet> snippetList = repository.findAllByOrderByLstmoddtDesc();
-		//model.addAttribute("snippet", new Snippet());
 		SnippetForm snippetForm = new SnippetForm();
 				
 		snippetList = snippetList.stream()
@@ -39,15 +36,21 @@ public class SnippetController {
 					.collect(Collectors.toList());		
 		snippetForm.setSnippetsList(snippetList);
 		
-		List<String> categoryList = null;
-		if (snippetList != null) {
-			categoryList = snippetList.stream()
-					.filter(s -> s.getCategory() != null)
-					.filter(s -> !s.getCategory().isBlank())
-					.map(s -> s.getCategory())
-					.distinct()
-					.collect(Collectors.toList());
+		List<String> categoryList;
+		List<String> list = new ArrayList<>();
+		Set<String> uniqueValues = new HashSet<>();
+		for (Snippet s : snippetList) {
+			if (s.getCategory() != null) {
+				if (!s.getCategory().isBlank()) {
+					String category = s.getCategory();
+					if (uniqueValues.add(category)) {
+						list.add(category);
+					}
+				}
+			}
 		}
+		categoryList = list;
+
 		// set categoryList to display drop down in view 
 		snippetForm.setCategoryList(categoryList);
 
@@ -61,7 +64,7 @@ public class SnippetController {
 	}
 	
 	// Displays all the entries fetched from database.
-	// SnippetForm is a wrapper around Snippet (which is an Model)
+	// SnippetForm is a wrapper around Snippet (which is a Model)
 	@PostMapping("th_snippets")
 	public String snippetSubmit(@ModelAttribute("snippetForm") SnippetForm snippetForm
 			, BindingResult bindingResult
@@ -78,18 +81,22 @@ public class SnippetController {
 				if (snippetOpt.isPresent()) {
 					snippet = snippetOpt.get();
 				}
+				if (snippet != null) {
+					snippet.setCategory(snippetForm.getCategory());
+				}
 			} else {
 				snippet = new Snippet();
 				Timestamp ts = new Timestamp(System.currentTimeMillis());
 				snippet.setCrtdt(ts);
+                snippet.setCategory(snippetForm.getCategory());
+            }
+
+			if (snippet != null) {
+				snippet.setTitle(snippetForm.getTitle());
+				snippet.setContent(snippetForm.getContent());
+				snippet.setLstmoddt(new Timestamp(System.currentTimeMillis()));
+				repository.save(snippet);
 			}
-
-			snippet.setCategory(snippetForm.getCategory());
-			snippet.setTitle(snippetForm.getTitle());
-			snippet.setContent(snippetForm.getContent());
-			snippet.setLstmoddt(new Timestamp(System.currentTimeMillis()));
-
-			repository.save(snippet);
 		}
 
 		List<Snippet> snippetList = repository.findAllByOrderByLstmoddtDesc();
@@ -99,14 +106,16 @@ public class SnippetController {
 					s.getContent().toLowerCase().contains(keyword))
 				.map(s -> new Snippet(s.getId(), s.getCategory(), s.getTitle(), s.getContent().trim()))
 				.collect(Collectors.toList());
-		
-		List<String> categoryList = null;
-		if (snippetList != null) {
-			categoryList = snippetList.stream()
-					.map(s -> s.getCategory())
-					.distinct()
-					.collect(Collectors.toList());
+
+		List<String> categoryList = new ArrayList<>();
+		Set<String> uniqueValues = new HashSet<>();
+		for (Snippet s : snippetList) {
+			String category = s.getCategory();
+			if (uniqueValues.add(category)) {
+				categoryList.add(category);
+			}
 		}
+
 
 		// set categoryList to display drop down in view 
 		snippetForm.setCategoryList(categoryList);

@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(value = "/snippets")
 public class SnippetRestController {
 	private final SnippetRepository repository;
-	private Logger logger = LoggerFactory.getLogger(SnippetRestController.class);
+	private final Logger logger = LoggerFactory.getLogger(SnippetRestController.class);
 
 	SnippetRestController(SnippetRepository repository) {
 		this.repository = repository;
@@ -55,7 +55,7 @@ public class SnippetRestController {
 	@GetMapping("/c/{cat}")
 	List<Snippet> findByCategory(@PathVariable String cat) {
 		List<Snippet> snippetCatList = repository.findByCategory(cat);
-		if (snippetCatList.size() == 0) {
+		if (snippetCatList.isEmpty()) {
 			snippetCatList = repository.findByCategoryContainingIgnoreCase(cat);
 		}
 		return snippetCatList;
@@ -65,7 +65,7 @@ public class SnippetRestController {
 	@GetMapping("/t/{title}")
 	List<Snippet> findByTitle(@PathVariable String title) {
 		List<Snippet> snippetTitleList = repository.findByTitle(title);
-		if (snippetTitleList.size() == 0) {
+		if (snippetTitleList.isEmpty()) {
 			snippetTitleList = repository.findByTitleContainingIgnoreCase(title);
 		}
 		return snippetTitleList;
