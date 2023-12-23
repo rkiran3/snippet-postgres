@@ -32,15 +32,16 @@
         	<table>
 	    		<tr>
 	    			<td>
-						<label for="category">Category</label>
+						<label for="categoryDropDownList">Category</label>
 					</td>
 	    			<td>
 						<input type="hidden" id="snippet_id" name="id" th:field="*{id}">
-						<input id="category" type="text" th:field="*{category}" name="title" />
-						<label for="categoryDropDownList">Options</label>
-	    				<select id="categoryDropDownList">
-	    					<option value="*{category}">select option</option>
-	    					<option th:each="option : ${snippetForm.categoryList}" th:value="${option}" th:text="${option}"></option>
+
+
+	    				<select id="categoryDropDownList" th:field="*{category}">
+	    					<option th:each="option: ${snippetForm.categoryList}"
+									th:value="${option}"
+									th:text="${option}"></option>
 	    				</select>
 	    			</td>      			
 	    		</tr>
