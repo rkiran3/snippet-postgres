@@ -35,21 +35,8 @@ public class SnippetController {
 			.map(s -> new Snippet(s.getId(), s.getCategory(), s.getTitle(), s.getContent().trim()))
 					.collect(Collectors.toList());		
 		snippetForm.setSnippetsList(snippetList);
-		
-		List<String> categoryList;
-		List<String> list = new ArrayList<>();
-		Set<String> uniqueValues = new HashSet<>();
-		for (Snippet s : snippetList) {
-			if (s.getCategory() != null) {
-				if (!s.getCategory().isBlank()) {
-					String category = s.getCategory();
-					if (uniqueValues.add(category)) {
-						list.add(category);
-					}
-				}
-			}
-		}
-		categoryList = list;
+
+		List<String> categoryList = getUniqueCategories(snippetList);
 
 		// set categoryList to display drop down in view 
 		snippetForm.setCategoryList(categoryList);
@@ -69,65 +56,58 @@ public class SnippetController {
 	public String snippetSubmit(@ModelAttribute("snippetForm") SnippetForm snippetForm
 			, BindingResult bindingResult
 			, Model model){
-		if (bindingResult.hasErrors()) {
-			return "error";
-		}
-		String keyword = snippetForm.getKeyword() != null ? snippetForm.getKeyword().toLowerCase() : "";
+        if (!bindingResult.hasErrors()) {
+            String keyword = snippetForm.getKeyword() != null ? snippetForm.getKeyword().toLowerCase() : "";
 
-		if (snippetForm.getCategory() != null && snippetForm.getTitle() != null && snippetForm.getContent() != null) {
-			Snippet snippet = null;			
-			if (snippetForm.getId() != null) {
-				Optional<Snippet> snippetOpt = repository.findById(snippetForm.getId());
-				if (snippetOpt.isPresent()) {
-					snippet = snippetOpt.get();
-				}
-				if (snippet != null) {
-					snippet.setCategory(snippetForm.getCategory());
-				}
-			} else {
-				snippet = new Snippet();
-				Timestamp ts = new Timestamp(System.currentTimeMillis());
-				snippet.setCrtdt(ts);
-                snippet.setCategory(snippetForm.getCategory());
+            if (snippetForm.getCategory() != null && snippetForm.getTitle() != null && snippetForm.getContent() != null) {
+                Snippet snippet = null;
+                if (snippetForm.getId() != null) {
+                    Optional<Snippet> snippetOpt = repository.findById(snippetForm.getId());
+                    if (snippetOpt.isPresent()) {
+                        snippet = snippetOpt.get();
+                    }
+                    if (snippet != null) {
+                        snippet.setCategory(snippetForm.getCategory());
+                    }
+                } else {
+                    snippet = new Snippet();
+                    Timestamp ts = new Timestamp(System.currentTimeMillis());
+                    snippet.setCrtdt(ts);
+                    snippet.setCategory(snippetForm.getCategory());
+                }
+
+                if (snippet != null) {
+                    snippet.setTitle(snippetForm.getTitle());
+                    snippet.setContent(snippetForm.getContent());
+                    snippet.setLstmoddt(new Timestamp(System.currentTimeMillis()));
+                    repository.save(snippet);
+                }
             }
 
-			if (snippet != null) {
-				snippet.setTitle(snippetForm.getTitle());
-				snippet.setContent(snippetForm.getContent());
-				snippet.setLstmoddt(new Timestamp(System.currentTimeMillis()));
-				repository.save(snippet);
-			}
-		}
+            List<Snippet> snippetList = repository.findAllByOrderByLstmoddtDesc();
+            snippetList = snippetList.stream()
+                    .filter(s -> s.getCategory().toLowerCase().contains(keyword) ||
+                            s.getTitle().toLowerCase().contains(keyword) ||
+                            s.getContent().toLowerCase().contains(keyword))
+                    .map(s -> new Snippet(s.getId(), s.getCategory(), s.getTitle(), s.getContent().trim()))
+                    .collect(Collectors.toList());
 
-		List<Snippet> snippetList = repository.findAllByOrderByLstmoddtDesc();
-		snippetList = snippetList.stream()
-				.filter(s -> s.getCategory().toLowerCase().contains(keyword) ||
-					s.getTitle().toLowerCase().contains(keyword) ||
-					s.getContent().toLowerCase().contains(keyword))
-				.map(s -> new Snippet(s.getId(), s.getCategory(), s.getTitle(), s.getContent().trim()))
-				.collect(Collectors.toList());
+            List<String> categoryList = getUniqueCategories(snippetList);
 
-		List<String> categoryList = new ArrayList<>();
-		Set<String> uniqueValues = new HashSet<>();
-		for (Snippet s : snippetList) {
-			String category = s.getCategory();
-			if (uniqueValues.add(category)) {
-				categoryList.add(category);
-			}
-		}
+            // set categoryList to display drop down in view
+            snippetForm.setCategoryList(categoryList);
+            model.addAttribute("categoryList", categoryList);
 
+            snippetForm.setSnippetsList(snippetList);
+            model.addAttribute("snippetForm", snippetForm);
 
-		// set categoryList to display drop down in view 
-		snippetForm.setCategoryList(categoryList);
-		model.addAttribute("categoryList", categoryList);
-		
-		snippetForm.setSnippetsList(snippetList);
-		model.addAttribute("snippetForm", snippetForm);
-		
-		logger.info("Adding snippets");
-		model.addAttribute("snippets", snippetList);
-		return "list_snippets";
-	}
+            logger.info("Adding snippets");
+            model.addAttribute("snippets", snippetList);
+            return "list_snippets";
+        } else {
+            return "error";
+        }
+    }
 	
 	// Get random Snippet
 	@GetMapping("/th_rand")
@@ -193,5 +173,20 @@ public class SnippetController {
 		model.addAttribute("snippets", snippetList);
 		logger.info("Delete snippets");
 		return "list_snippets";
+	}
+
+	/**
+	 * Get the categories sorted and remove duplicates
+	 *
+	 * @param snippetList list of existing entries
+	 * @return a sorted list of categories
+	 */
+	private List<String> getUniqueCategories(List<Snippet> snippetList) {
+        Set<String> categorySet = snippetList.stream()
+				.filter(s -> s.getCategory() != null && !s.getCategory().isBlank())
+				.map(Snippet::getCategory)
+				.collect(Collectors.toSet());
+		return categorySet.stream().sorted()
+				.collect(Collectors.toList());
 	}
 }
