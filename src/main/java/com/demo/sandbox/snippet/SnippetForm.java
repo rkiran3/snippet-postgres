@@ -11,8 +11,6 @@ import lombok.Setter;
  * Class to display frontend model which will display attributes.
  */
 
-@Getter
-@Setter
 @Data
 @NoArgsConstructor
 public class SnippetForm {
